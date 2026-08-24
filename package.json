@@ -1,0 +1,33 @@
+{
+  "name": "sakhi-seva-order-desk",
+  "private": true,
+  "scripts": {
+    "dev": "shopify app dev",
+    "build": "react-router build",
+    "start": "react-router-serve ./build/server/index.js",
+    "deploy": "shopify app deploy",
+    "prebuild": "prisma generate",
+    "prestart": "prisma db push --accept-data-loss"
+  },
+  "dependencies": {
+    "@react-router/dev": "^7.9.2",
+    "@shopify/shopify-app-react-router": "^1.0.0",
+    "isbot": "^5.1.31",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-router": "^7.9.2",
+    "zod": "^4.1.5",
+    "@react-router/node": "^7.9.2",
+    "@react-router/serve": "^7.9.2",
+    "@shopify/shopify-app-session-storage-prisma": "^8.0.0",
+    "@prisma/client": "^6.19.0"
+  },
+  "devDependencies": {
+    "vite": "^7.1.5",
+    "typescript": "^5.9.2",
+    "prisma": "^6.19.0"
+  },
+  "engines": {
+    "node": ">=20.10.0"
+  }
+}

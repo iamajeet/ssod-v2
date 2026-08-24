@@ -1,0 +1,91 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>Sakhi Seva Order Desk</title>
+<style>
+body{margin:0;background:#f5f5f5;color:#222;font-family:Arial,sans-serif}
+.wrap{max-width:1100px;margin:30px auto;padding:20px}.card{background:#fff;border:1px solid #ddd;border-radius:12px;padding:24px}
+h1{margin-top:0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}label{font-size:13px;font-weight:600;color:#555}input,select,textarea{width:100%;padding:10px;border:1px solid #ccc;border-radius:7px;box-sizing:border-box}textarea{min-height:80px}button{padding:10px 15px;border:0;border-radius:7px;font-weight:600;cursor:pointer}.primary{background:#222;color:#fff}.secondary{background:#eee}.danger{background:#ffe2e2;color:#900}.row{display:flex;gap:10px;align-items:end}.item{border:1px solid #ddd;border-radius:9px;padding:14px;margin-top:12px;background:#fafafa}.hidden{display:none}.msg{padding:10px;border-radius:7px;margin-bottom:12px}.error{background:#ffe5e5;color:#900}.ok{background:#e3f6e8;color:#175c2a}.top{display:flex;justify-content:space-between;align-items:center}.small{font-size:12px;color:#777}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="card" id="loginCard">
+<h1>Sakhi Seva — Order Desk</h1><p class="small">Private internal order desk.</p>
+<div id="loginMsg"></div>
+<label>Password</label><input id="password" type="password" autocomplete="current-password">
+<br><br><button class="primary" onclick="login()">Login</button>
+</div>
+
+<div class="card hidden" id="desk">
+<div class="top"><div><h1>Order Desk</h1><div class="small">Private Shopify-connected workspace</div></div><button class="secondary" onclick="logout()">Logout</button></div>
+<hr>
+<div id="msg"></div>
+<div class="grid">
+<div><label>Customer Name</label><input id="customerName"></div>
+<div><label>WhatsApp / Phone</label><input id="phone"></div>
+<div><label>Source</label><select id="source"><option>WhatsApp</option><option>Instagram</option><option>Facebook</option><option>Offline</option></select></div>
+<div><label>Lead ID</label><input id="leadId" value="SS-L-TEST"></div>
+<div style="grid-column:1/-1"><label>Customer Request</label><textarea id="request"></textarea></div>
+</div>
+<h2>Items</h2>
+<div id="items"></div>
+<br><button class="secondary" onclick="addItem()">+ Add Item</button>
+<div class="grid" style="margin-top:18px">
+<div><label>Shipping (₹)</label><input id="shipping" type="number" value="0"></div>
+<div><label>Discount (₹)</label><input id="discount" type="number" value="0"></div>
+</div>
+<h2>Total: ₹<span id="total">0</span></h2>
+<button class="primary" onclick="createDraft()">Create Shopify Draft Order</button>
+</div>
+</div>
+<script>
+const key="sakhiOrderDeskToken";
+function token(){return localStorage.getItem(key)||""}
+function msg(text,kind=""){document.getElementById("msg").innerHTML=text?`<div class="msg ${kind}">${text}</div>`:""}
+async function call(data){
+ const r=await fetch(location.pathname,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});
+ const j=await r.json(); if(!r.ok) throw new Error(j.error||"Request failed"); return j;
+}
+async function login(){
+ const p=document.getElementById("password").value;
+ try{const j=await call({op:"login",password:p});localStorage.setItem(key,j.token);showDesk()}catch(e){document.getElementById("loginMsg").innerHTML=`<div class="msg error">${e.message}</div>`}
+}
+function logout(){localStorage.removeItem(key);location.reload()}
+function showDesk(){document.getElementById("loginCard").classList.add("hidden");document.getElementById("desk").classList.remove("hidden");if(!document.querySelector(".item"))addItem()}
+function addItem(data={}){
+ const d=document.createElement("div");d.className="item";
+ d.innerHTML=`<div class="grid">
+ <div><label>Description</label><input class="desc" value="${esc(data.description||"")}"></div>
+ <div><label>Size</label><input class="size" value="${esc(data.size||"")}"></div>
+ <div><label>Quantity</label><input class="qty" type="number" min="1" value="${data.quantity||1}" oninput="calc()"></div>
+ <div><label>Price (₹)</label><input class="price" type="number" min="0" value="${data.price||0}" oninput="calc()"></div>
+ <div><label>Mapping</label><select class="mode" onchange="toggleVariant(this)"><option value="CUSTOM_OFFLINE">Custom / Offline Item</option><option value="SHOPIFY_PRODUCT">Existing Shopify Product</option></select></div>
+ <div><label>Shopify Variant ID (only for existing product)</label><input class="variant" placeholder="gid://shopify/ProductVariant/..."></div>
+ <div style="grid-column:1/-1"><label>Notes</label><input class="notes" value="${esc(data.notes||"")}"></div>
+ </div><br><button class="danger" onclick="this.parentElement.remove();calc()">Remove</button>`;
+ document.getElementById("items").appendChild(d);calc();
+}
+function toggleVariant(sel){sel.parentElement.parentElement.querySelector(".variant").disabled=sel.value!=="SHOPIFY_PRODUCT"}
+function calc(){let s=0;document.querySelectorAll(".item").forEach(i=>s+=(+i.querySelector(".qty").value||0)*(+i.querySelector(".price").value||0));s+=+(document.getElementById("shipping").value||0);s-=+(document.getElementById("discount").value||0);document.getElementById("total").textContent=Math.max(0,s).toLocaleString("en-IN")}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+async function createDraft(){
+ msg("");
+ const items=[...document.querySelectorAll(".item")].map(i=>{
+  const mode=i.querySelector(".mode").value;
+  const li={quantity:+i.querySelector(".qty").value||1,customAttributes:[{key:"Size",value:i.querySelector(".size").value||""},{key:"Lead ID",value:document.getElementById("leadId").value},{key:"Source",value:document.getElementById("source").value},{key:"Note",value:i.querySelector(".notes").value||""}]};
+  if(mode==="SHOPIFY_PRODUCT"){li.variantId=i.querySelector(".variant").value.trim()}else{li.title=i.querySelector(".desc").value.trim();li.originalUnitPriceWithCurrency={amount:String(i.querySelector(".price").value||"0"),currencyCode:"INR"};li.requiresShipping=true}
+  return li;
+ });
+ if(items.some(i=>i.variantId==="")){msg("Enter a Shopify Variant ID for every Existing Shopify Product item.","error");return}
+ const input={phone:document.getElementById("phone").value.trim(),note:document.getElementById("request").value.trim(),tags:[document.getElementById("leadId").value,"Offline Lead",document.getElementById("source").value],customAttributes:[{key:"Lead ID",value:document.getElementById("leadId").value},{key:"Customer",value:document.getElementById("customerName").value},{key:"Channel",value:document.getElementById("source").value}],lineItems:items};
+ const ship=+(document.getElementById("shipping").value||0); if(ship>0) input.shippingLine={title:"Shipping",priceWithCurrency:{amount:String(ship),currencyCode:"INR"}}; const discount=+(document.getElementById("discount").value||0); if(discount>0) input.appliedDiscount={title:"Order Desk discount",value:discount,valueType:"FIXED_AMOUNT",description:"Sakhi Seva Order Desk"};
+ try{const j=await call({op:"createDraft",token:token(),input});msg(`Draft created: <strong>${j.draftOrder.name}</strong><br><a href="${j.draftOrder.invoiceUrl}" target="_blank" rel="noopener">Open secure payment link</a>`,"ok")}catch(e){msg(e.message,"error")}
+}
+document.getElementById("shipping").addEventListener("input",calc);document.getElementById("discount").addEventListener("input",calc);
+if(token())showDesk();
+</script>
+</body></html>

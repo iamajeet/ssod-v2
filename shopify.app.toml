@@ -1,0 +1,15 @@
+name = "Sakhi Seva Order Desk"
+client_id = "REPLACE_WITH_SHOPIFY_APP_CLIENT_ID"
+application_url = "https://REPLACE_WITH_YOUR_APP_DOMAIN"
+embedded = false
+
+[access_scopes]
+scopes = "write_draft_orders,read_draft_orders,read_customers,read_products,write_app_proxy"
+
+[app_proxy]
+url = "/proxy"
+prefix = "apps"
+subpath = "sakhi-order-desk"
+
+[build]
+automatically_update_urls_on_dev = true
