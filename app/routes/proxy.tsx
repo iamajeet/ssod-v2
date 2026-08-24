@@ -38,14 +38,15 @@ async function getBody(request: Request) {
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
-  await authenticate.public.appProxy(request);
-  const html = fs.readFileSync(path.join(process.cwd(), "public", "order-desk.html"), "utf8");
-  return new Response(html, {
-    headers: {
-      "Content-Type": "text/html; charset=utf-8",
-      "Cache-Control": "no-store, private",
-      "X-Robots-Tag": "noindex, nofollow, noarchive",
-    },
+  const { liquid } = await authenticate.public.appProxy(request);
+
+  const html = fs.readFileSync(
+    path.join(process.cwd(), "public", "order-desk.html"),
+    "utf8"
+  );
+
+  return liquid(html, {
+    layout: false,
   });
 }
 
